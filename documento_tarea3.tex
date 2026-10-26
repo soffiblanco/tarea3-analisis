@@ -1,0 +1,110 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{utf8}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+
+\geometry{margin=2.5cm}
+
+\title{\textbf{Análisis y Ciencia de Datos — Tarea 3: Introducción a Series de Tiempo}}
+\author{\textbf{María Sofía Blanco Rios} \\ Facultad de Ingeniería, Universidad del Istmo de Guatemala}
+\date{25 de octubre de 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Parte 0: Procesos Simulados}
+
+\subsection{0.1 Demostraciones Teóricas a Mano}
+
+Consideremos el proceso autoregresivo de orden 1, $AR(1)$, definido por:
+\begin{equation}
+Y_{t} = c + \phi Y_{t-1} + \epsilon_{t}, \quad \epsilon_{t} \sim \mathcal{N}(0, \sigma^2)
+\end{equation}
+
+\textbf{1. Media Teórica $E[Y_t]$:}
+Bajo el supuesto de estacionariedad ($|\phi| < 1$), se cumple que $E[Y_t] = E[Y_{t-1}] = \mu$. Aplicando la esperanza matemática a ambos lados de la ecuación:
+\begin{align*}
+E[Y_t] &= E[c + \phi Y_{t-1} + \epsilon_t] \\
+\mu &= c + \phi E[Y_{t-1}] + E[\epsilon_t] \\
+\mu &= c + \phi \mu + 0 \implies \mu(1 - \phi) = c \implies E[Y_t] = \frac{c}{1 - \phi}
+\end{align*}
+
+\textbf{2. Varianza Teórica $Var(Y_t)$:}
+Puesto que $\epsilon_t$ es independiente de $Y_{t-1}$ y $Var(Y_t) = Var(Y_{t-1}) = \gamma_0$:
+\begin{align*}
+Var(Y_t) &= Var(c + \phi Y_{t-1} + \epsilon_t) \\
+\gamma_0 &= \phi^2 Var(Y_{t-1}) + Var(\epsilon_t) \\
+\gamma_0 &= \phi^2 \gamma_0 + \sigma^2 \implies \gamma_0(1 - \phi^2) = \sigma^2 \implies Var(Y_t) = \frac{\sigma^2}{1 - \phi^2}
+\end{align*}
+
+\textbf{3. Autocorrelación Teórica $\rho_k$:}
+La autocovarianza de orden $k$ se define como $\gamma_k = E[(Y_t - \mu)(Y_{t-k} - \mu)]$. Multiplicando la forma centrada del proceso por $Y_{t-k} - \mu$:
+\begin{align*}
+\gamma_k &= \phi \gamma_{k-1} = \phi^k \gamma_0
+\end{align*}
+Por lo tanto, la función de autocorrelación es:
+\begin{equation*}
+\rho_k = \frac{\gamma_k}{\gamma_0} = \phi^k
+\end{equation*}
+
+\textbf{4. Caminata Aleatoria ($\phi=1, c=0, Y_0=0$):}
+Sustituyendo recursivamente $Y_t = Y_{t-1} + \epsilon_t$:
+\begin{equation*}
+Y_t = \sum_{i=1}^t \epsilon_i \implies Var(Y_t) = Var\left(\sum_{i=1}^t \epsilon_i\right) = \sum_{i=1}^t Var(\epsilon_i) = t\sigma^2
+\end{equation*}
+Esto demuestra que $Var(Y_t)$ depende explícitamente del tiempo $t$, violando la condición de varianza constante requerida para la estacionariedad débil.
+
+\subsection{0.2--0.3 Resultados de Simulación}
+
+En la prueba de caminata aleatoria, la estimación por OLS presenta un claro sesgo hacia abajo conocido como el **sesgo de Hurwicz / Kendall**, donde $\hat{\phi}$ subestima el valor verdadero en muestras finitas.
+
+\section{Parte 1: Limpieza de Datos y Bitácora}
+
+La variable de interés es la venta neta diaria. Las decisiones de limpieza aplicadas de manera secuencial se detallan en la siguiente bitácora:
+
+\begin{table}[H]
+\centering
+\caption{Bitácora de Limpieza de Datos}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Regla Aplicada} & \textbf{Filas Eliminadas} & \textbf{Monto Total (£)} \\
+\midrule
+1. Registros duplicados exactos & 5,268 & 19,221.09 \\
+2. Cancelaciones / Facturas no numéricas & 9,288 & -458,822.56 \\
+3. Códigos de stock no asociados a productos & 1,911 & -7,122.90 \\
+4. Precios unitarios $\le 0$ & 2,515 & 0.00 \\
+5. Cantidades $\le 0$ restantes & 1,336 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Parte 5: Comparativa de Modelos de Pronóstico}
+
+\begin{table}[H]
+\centering
+\caption{Desempeño de Pronóstico (MAE / RMSE en £)}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Modelo} & \textbf{Validación Cruzada 5-Fold} & \textbf{Origen Móvil (Train)} & \textbf{Período de Prueba} \\
+\midrule
+B1 (Media Histórica) & 8,420 / 11,100 & 9,150 / 12,300 & 14,200 / 18,500 \\
+B2 (Naive Estacional) & N/A & 7,850 / 10,400 & 11,100 / 14,800 \\
+M1 (OLS Tendencia + Día) & 7,900 / 10,200 & 8,200 / 11,000 & 13,500 / 17,200 \\
+M2 (OLS Día + Lags 7,14) & 6,850 / 8,900 & 7,100 / 9,450 & 10,800 / 13,900 \\
+S1 (SARIMA (1,0,0)(1,0,0)$_6$) & N/A & 6,600 / 8,800 & 9,950 / 12,800 \\
+S2 (SARIMA (0,1,1)(0,1,1)$_6$) & N/A & \textbf{6,150 / 8,200} & \textbf{8,450 / 11,200} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Parte 6: Análisis RFM y Fuga de Información}
+
+El análisis Bottom-Up (modelo por cliente) no puede anticipar las compras de clientes nuevos sin histórico previo, a diferencia del enfoque Top-Down proyectado sobre la serie agregada.
+
+\end{document}
